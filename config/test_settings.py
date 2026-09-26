@@ -13,3 +13,6 @@ from config.settings import *  # noqa: F403
 
 # The suite's cost is dominated by password hashing on user fixtures.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+OAUTH_ISSUER = "https://auth.example.test"
+ALLOWED_HOSTS = ["testserver", "auth.example.test"]

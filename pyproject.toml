@@ -43,7 +43,8 @@ select = [
 ]
 # S105 flags every string with "token" in its name, which in an OAuth server is
 # every grant type and error code. Real secrets are caught by gitleaks in CI.
-ignore = ["S105"]
+# N818 would rename InvalidDPoPProof away from the RFC error code it models.
+ignore = ["S105", "N818"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests assert, and they are full of throwaway secrets by design.

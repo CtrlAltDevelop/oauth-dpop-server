@@ -25,3 +25,12 @@ def test_metadata_advertises_the_dpop_algorithms_the_server_accepts(client: Http
 def test_metadata_points_at_the_jwks(client: HttpClient) -> None:
     body = client.get("/.well-known/oauth-authorization-server").json()
     assert body["jwks_uri"] == f"{ISSUER}/oauth/jwks"
+
+
+def test_metadata_advertises_s256_pkce_only(client: HttpClient) -> None:
+    """OAuth 2.1 §4.1.1: plain is not offered."""
+    body = client.get("/.well-known/oauth-authorization-server").json()
+    assert body["code_challenge_methods_supported"] == ["S256"]
+    assert body["response_types_supported"] == ["code"]
+    assert body["authorization_endpoint"] == f"{ISSUER}/oauth/authorize"
+    assert body["authorization_response_iss_parameter_supported"] is True

@@ -1,0 +1,15 @@
+{% extends "authserver/base.html" %}
+{% block title %}Authorize {{ client.name }}{% endblock %}
+{% block content %}
+<h1><strong>{{ client.name }}</strong> wants to access your account</h1>
+<p>Signed in as <strong>{{ user.get_username }}</strong>. If you approve, it will be able to:</p>
+<ul>
+  {% for name, description in scopes %}<li>{{ description }} <span class="muted">({{ name }})</span></li>{% endfor %}
+</ul>
+<p class="muted">You will be sent back to <strong>{{ redirect_target }}</strong>.</p>
+<form method="post" action="?request={{ handle|urlencode }}">
+  {% csrf_token %}
+  <button type="submit" name="decision" value="approve">Approve</button>
+  <button type="submit" name="decision" value="deny" class="secondary">Deny</button>
+</form>
+{% endblock %}

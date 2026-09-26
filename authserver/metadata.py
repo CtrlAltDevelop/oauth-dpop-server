@@ -4,11 +4,14 @@ from typing import Any
 
 from django.urls import reverse
 
+from authserver.clients import CLIENT_AUTH_METHODS
 from authserver.conf import server_settings
+from authserver.grants import GRANT_HANDLERS
 from authserver.keys import SIGNING_ALGORITHM
 
 METADATA_PATH = "/.well-known/oauth-authorization-server"
 JWKS_PATH = "/oauth/jwks"
+TOKEN_PATH = "/oauth/token"
 
 
 def server_metadata() -> dict[str, Any]:
@@ -17,9 +20,12 @@ def server_metadata() -> dict[str, Any]:
         # RFC 8414 §3.3: a client MUST check this equals the issuer it asked about.
         "issuer": conf.issuer,
         "authorization_endpoint": conf.endpoint(reverse("authserver:authorize")),
+        "token_endpoint": conf.endpoint(TOKEN_PATH),
         "jwks_uri": conf.endpoint(JWKS_PATH),
         "scopes_supported": sorted(conf.scopes),
         "response_types_supported": ["code"],
+        "grant_types_supported": sorted(GRANT_HANDLERS),
+        "token_endpoint_auth_methods_supported": list(CLIENT_AUTH_METHODS),
         "response_modes_supported": ["query"],
         # OAuth 2.1 §4.1.1: PKCE for every client, and only the S256 method.
         "code_challenge_methods_supported": ["S256"],

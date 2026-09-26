@@ -34,3 +34,14 @@ def test_metadata_advertises_s256_pkce_only(client: HttpClient) -> None:
     assert body["response_types_supported"] == ["code"]
     assert body["authorization_endpoint"] == f"{ISSUER}/oauth/authorize"
     assert body["authorization_response_iss_parameter_supported"] is True
+
+
+def test_metadata_describes_the_token_endpoint(client: HttpClient) -> None:
+    body = client.get("/.well-known/oauth-authorization-server").json()
+    assert body["token_endpoint"] == f"{ISSUER}/oauth/token"
+    assert "authorization_code" in body["grant_types_supported"]
+    assert set(body["token_endpoint_auth_methods_supported"]) == {
+        "client_secret_basic",
+        "client_secret_post",
+        "none",
+    }

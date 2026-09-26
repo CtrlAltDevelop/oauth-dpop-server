@@ -18,6 +18,7 @@ from django.utils import timezone
 from authserver import pkce
 from authserver.conf import server_settings
 from authserver.credentials import digest, new_token
+from authserver.http import single_valued
 from authserver.models import AuthorizationCode, Client
 from authserver.scopes import format_scope, parse_scope
 
@@ -61,17 +62,6 @@ class AuthorizationRequest:
     @classmethod
     def from_session_data(cls, data: dict[str, Any]) -> "AuthorizationRequest":
         return cls(**data)
-
-
-def single_valued(lists: dict[str, list[str]]) -> tuple[dict[str, str], set[str]]:
-    """Flatten request parameters, reporting any that were repeated.
-
-    RFC 6749 §3.1: "Request and response parameters MUST NOT be included more
-    than once." A repeated parameter is how parameter-pollution attacks make
-    two components disagree about what was asked for.
-    """
-    repeated = {name for name, values in lists.items() if len(values) > 1}
-    return {name: values[-1] for name, values in lists.items()}, repeated
 
 
 def validate_authorization_request(

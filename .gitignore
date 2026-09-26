@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+
+# Secrets and local configuration. Signing keys live in the database,
+# encrypted; nothing key-shaped belongs in the tree.
+.env
+*.pem
+*.key
+
+# Dart interop client
+interop/dart/.dart_tool/
+interop/dart/pubspec.lock
+
+# Editors
+.idea/
+.vscode/

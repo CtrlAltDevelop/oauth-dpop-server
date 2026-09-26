@@ -1,0 +1,76 @@
+[project]
+name = "oauth-dpop-server"
+version = "0.1.0"
+description = "An OAuth 2.1 authorization server that issues DPoP-bound access tokens (RFC 9449)."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Mohammad Zarif" }]
+requires-python = ">=3.12"
+dependencies = [
+    "cryptography>=50.0.1",
+    "dj-database-url>=3.1.2",
+    "django>=5.2,<5.3",
+    "django-ninja>=1.7.1",
+    "joserfc>=1.7.5",
+    "psycopg[binary]>=3.3.6",
+    "redis>=8.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "django-stubs>=5.2,<5.3",
+    "fakeredis>=2.38.0",
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-django>=4.14.0",
+    "ruff>=0.16.9",
+]
+
+# An application, not a library: nothing here is built or published.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["interop"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "N", "UP", "B", "S", "SIM", "C4", "DJ", "RUF", "PT", "RET", "PIE", "T20",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert, and they are full of throwaway secrets by design.
+"tests/**" = ["S101", "S105", "S106", "S311"]
+"*/migrations/*" = ["E501", "RUF012"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["mypy_django_plugin.main"]
+exclude = ["^\\.venv/", "^interop/"]
+
+[[tool.mypy.overrides]]
+module = ["*.migrations.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["fakeredis.*", "dj_database_url.*"]
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "config.test_settings"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.test_settings"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "interop: drives the Dart dpop_client against a live server (needs the Dart SDK)",
+]
+
+[tool.coverage.run]
+source = ["authserver", "dpop", "ninja_dpop", "demo_api"]
+omit = ["*/migrations/*"]

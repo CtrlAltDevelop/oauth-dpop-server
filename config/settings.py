@@ -9,7 +9,12 @@ import os
 from pathlib import Path
 
 import dj_database_url
+import django_stubs_ext
 from django.core.exceptions import ImproperlyConfigured
+
+# Lets generic Django classes (ModelAdmin[Client], QuerySet[Token]) be
+# subscripted at runtime, as they already are for the type checker.
+django_stubs_ext.monkeypatch()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -31,7 +36,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     if not DEBUG:
         raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is off.")
-    SECRET_KEY = "dev-only-insecure-secret-key-do-not-deploy"  # noqa: S105
+    SECRET_KEY = "dev-only-insecure-secret-key-do-not-deploy"
 
 ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 

@@ -18,8 +18,10 @@ from joserfc import jws
 from joserfc.errors import JoseError
 from joserfc.jwk import JWKRegistry, Key, RSAKey
 
-from dpop.errors import InvalidDPoPProof
+from dpop.errors import InvalidDPoPProof, UseDPoPNonce
 from dpop.htu import normalize_htu
+from dpop.nonce import NonceStore
+from dpop.replay import ReplayCache
 from dpop.thumbprint import access_token_hash
 
 # Asymmetric algorithms only (§4.3 step 5 forbids MAC-based ones and "none"),
@@ -54,6 +56,7 @@ class ProofPolicy:
     algorithms: frozenset[str]
     max_age: int = 60
     clock_skew: int = 5
+    require_nonce: bool = False
 
     def __post_init__(self) -> None:
         unsupported = self.algorithms - SUPPORTED_ALGORITHMS
@@ -61,6 +64,16 @@ class ProofPolicy:
             raise ValueError(f"unsupported DPoP algorithms: {sorted(unsupported)}")
         if not self.algorithms:
             raise ValueError("at least one DPoP algorithm must be allowed")
+
+    @property
+    def replay_window(self) -> int:
+        """How long, from now, a proof accepted now could still pass step 11.
+
+        The newest acceptable ``iat`` is ``now + skew``, which stays acceptable
+        until ``iat + max_age + skew``. A ``jti`` must be remembered that long
+        and not a second less.
+        """
+        return self.max_age + 2 * self.clock_skew
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,11 +143,25 @@ def _require_str(claims: dict[str, Any], name: str) -> str:
 class ProofVerifier:
     """Checks DPoP proofs against one policy.
 
-    ``clock`` returns the current Unix time; tests pass a fixed one.
+    ``replay_cache`` is mandatory: a verifier that forgets which proofs it has
+    seen accepts every replay inside the ``iat`` window. ``nonces`` is needed
+    only if the policy requires nonces or clients may send them. ``clock``
+    returns the current Unix time; tests pass a fixed one.
     """
 
-    def __init__(self, policy: ProofPolicy, *, clock: Callable[[], float] = time.time) -> None:
+    def __init__(
+        self,
+        policy: ProofPolicy,
+        *,
+        replay_cache: ReplayCache,
+        nonces: NonceStore | None = None,
+        clock: Callable[[], float] = time.time,
+    ) -> None:
+        if policy.require_nonce and nonces is None:
+            raise ValueError("a policy that requires nonces needs a nonce store")
         self._policy = policy
+        self._replay_cache = replay_cache
+        self._nonces = nonces
         self._clock = clock
 
     def verify(
@@ -154,7 +181,8 @@ class ProofVerifier:
         ``cnf.jkt``, a refresh token's binding, an authorization request's
         ``dpop_jkt`` — and the proof must be signed by that key.
 
-        Raises ``InvalidDPoPProof`` naming the first check that failed.
+        Raises ``UseDPoPNonce`` when a fresh nonce would fix the proof, and
+        ``InvalidDPoPProof`` naming the first check that failed otherwise.
         """
         if len(proof) > MAX_PROOF_LENGTH:
             raise InvalidDPoPProof("proof is too large")
@@ -217,6 +245,20 @@ class ProofVerifier:
         if not matches:
             raise InvalidDPoPProof("htu does not match the request URI")
 
+        # Step 10: the server's nonce, when it has provided one. A nonce we
+        # did not issue, or that has expired, gets the same answer as a
+        # missing one: here is a fresh nonce, try again (§8). A verifier with
+        # no nonce store never provided one, and step 10 does not apply.
+        nonce = claims.get("nonce")
+        if nonce is not None and not isinstance(nonce, str):
+            raise InvalidDPoPProof("nonce claim is not a string")
+        if self._nonces is not None:
+            if nonce is None:
+                if self._policy.require_nonce:
+                    raise UseDPoPNonce("nonce is required")
+            elif not self._nonces.is_valid(nonce):
+                raise UseDPoPNonce("nonce is unknown or expired")
+
         # Step 11: created within the acceptable window. Up to `clock_skew`
         # seconds in the future is tolerated for clients whose clocks run
         # fast; older than `max_age` (plus the same skew) is stale.
@@ -245,13 +287,19 @@ class ProofVerifier:
         ):
             raise InvalidDPoPProof("proof key does not match the bound key")
 
-        nonce = claims.get("nonce")
+        # §11.1: the jti has not been seen inside the window. Recorded last,
+        # once every other check has passed, so only a request that would
+        # otherwise succeed spends a jti — and scoped to the key, so a client
+        # cannot burn another client's jti values.
+        if not self._replay_cache.first_use(f"{jkt}:{jti}", self._policy.replay_window):
+            raise InvalidDPoPProof("jti has already been used")
+
         return VerifiedProof(
             jkt=jkt,
             jti=jti,
             htm=htm,
             htu=htu,
             iat=iat,
-            nonce=nonce if isinstance(nonce, str) else None,
+            nonce=nonce,
             jwk=dict(header["jwk"]),
         )

@@ -7,11 +7,13 @@ test holds the verifier to.
 import json
 import time
 
+import fakeredis
 import pytest
 from joserfc.jwk import ECKey, OctKey, OKPKey, RSAKey
 
 from dpop.errors import InvalidDPoPProof
 from dpop.proof import ProofPolicy, ProofVerifier, single_proof
+from dpop.replay import RedisReplayCache
 from dpop.thumbprint import jwk_thumbprint
 from tests.proofs import ProofFactory, b64url, unsigned_proof
 
@@ -25,9 +27,14 @@ def signer() -> ProofFactory:
     return ProofFactory()
 
 
+def _verifier(policy: ProofPolicy = POLICY) -> ProofVerifier:
+    cache = RedisReplayCache(fakeredis.FakeRedis(server=fakeredis.FakeServer()))
+    return ProofVerifier(policy, replay_cache=cache, clock=lambda: NOW)
+
+
 @pytest.fixture
 def verifier() -> ProofVerifier:
-    return ProofVerifier(POLICY, clock=lambda: NOW)
+    return _verifier()
 
 
 def _refused(verifier: ProofVerifier, proof: str, reason: str, **kwargs: object) -> None:
@@ -139,7 +146,7 @@ def test_a_symmetric_alg_is_refused(verifier: ProofVerifier) -> None:
 
 def test_an_asymmetric_alg_outside_the_allowlist_is_refused() -> None:
     """§4.3 step 5: alg is supported by the server."""
-    strict = ProofVerifier(ProofPolicy(algorithms=frozenset({"ES256"})), clock=lambda: NOW)
+    strict = _verifier(ProofPolicy(algorithms=frozenset({"ES256"})))
     es384 = ProofFactory(ECKey.generate_key("P-384", private=True), algorithm="ES384")
     _refused(strict, es384.proof("GET", URL, iat=NOW), "alg")
 
@@ -175,8 +182,7 @@ def test_a_key_that_does_not_fit_the_alg_is_refused(verifier: ProofVerifier) -> 
 @pytest.mark.filterwarnings("ignore::joserfc.errors.SecurityWarning")
 def test_a_short_rsa_key_is_refused() -> None:
     weak = ProofFactory(RSAKey.generate_key(1024, private=True, auto_kid=False), "PS256")
-    verifier = ProofVerifier(POLICY, clock=lambda: NOW)
-    _refused(verifier, weak.proof("GET", URL, iat=NOW), "RSA")
+    _refused(_verifier(), weak.proof("GET", URL, iat=NOW), "RSA")
 
 
 # --- Step 6 ----------------------------------------------------------------
@@ -350,6 +356,7 @@ def test_the_verified_jkt_is_the_rfc_7638_thumbprint_of_the_jwk(
 
 
 def test_the_real_clock_is_used_by_default(signer: ProofFactory) -> None:
-    ProofVerifier(POLICY).verify(
+    cache = RedisReplayCache(fakeredis.FakeRedis(server=fakeredis.FakeServer()))
+    ProofVerifier(POLICY, replay_cache=cache).verify(
         signer.proof("GET", URL, iat=int(time.time())), method="GET", url=URL
     )

@@ -17,8 +17,8 @@ from django.utils import timezone
 from authserver import pkce
 from authserver.credentials import constant_time_equals, digest
 from authserver.errors import OAuthError
-from authserver.models import AuthorizationCode, Client, TokenFamily
-from authserver.scopes import parse_scope
+from authserver.models import AuthorizationCode, Client, RefreshToken, TokenFamily
+from authserver.scopes import format_scope, parse_scope
 from authserver.tokens import (
     TokenResponse,
     issue_access_token,
@@ -94,6 +94,68 @@ def _redeem_code(
     return TokenResponse(access_token, expires_in, record.scope, refresh_token)
 
 
+def refresh_token(client: Client, params: dict[str, str], proof: VerifiedProof) -> TokenResponse:
+    """Rotate a refresh token (OAuth 2.1 §4.3), detecting reuse."""
+    (token,) = _require(params, "refresh_token")
+    outcome = _rotate_refresh_token(client, token, params.get("scope"), proof)
+    if isinstance(outcome, OAuthError):
+        raise outcome
+    return outcome
+
+
+@transaction.atomic
+def _rotate_refresh_token(
+    client: Client, token: str, requested_scope: str | None, proof: VerifiedProof
+) -> TokenResponse | OAuthError:
+    record = RefreshToken.objects.select_for_update().filter(token_hash=digest(token)).first()
+    if record is None:
+        return OAuthError("invalid_grant", "unknown refresh token")
+    # Locked too, so a reuse-triggered revocation and a legitimate rotation in
+    # the same family cannot interleave.
+    family = TokenFamily.objects.select_for_update().get(pk=record.family_id)
+    if family.client_id != client.pk:
+        return OAuthError("invalid_grant", "refresh token issued to another client")
+    if family.revoked_at is not None:
+        return OAuthError("invalid_grant", "token family is revoked")
+    if record.rotated_at is not None:
+        # OAuth 2.1 §4.3.1 / RFC 9700 §4.14.2: a rotated-away token came back.
+        # Either the client or an attacker holds a copy, and there is no telling
+        # which, so neither keeps the lineage.
+        revoke_family(family.id, TokenFamily.RevocationReason.REFRESH_TOKEN_REUSE)
+        return OAuthError("invalid_grant", "refresh token reused; family revoked")
+
+    now = timezone.now()
+    if record.expires_at <= now or family.expires_at <= now:
+        return OAuthError("invalid_grant", "refresh token expired")
+    if record.jkt and not constant_time_equals(record.jkt, proof.jkt):
+        # RFC 9449 §5: a key-bound refresh token needs a proof from that key.
+        # Refused without rotating: a thief holding the token but not the key
+        # must not be able to knock the real client off its lineage.
+        return OAuthError("invalid_dpop_proof", "proof key differs from the refresh token's key")
+
+    granted = parse_scope(record.scope)
+    scope = granted
+    if requested_scope is not None:
+        try:
+            scope = parse_scope(requested_scope)
+        except ValueError:
+            return OAuthError("invalid_scope", "scope is malformed")
+        # RFC 6749 §6: never more than was originally granted.
+        if not set(scope) <= set(granted):
+            return OAuthError("invalid_scope", "scope exceeds the original grant")
+
+    record.rotated_at = now
+    record.save(update_fields=["rotated_at"])
+    access_token, expires_in = issue_access_token(
+        client=client, scope=scope, jkt=proof.jkt, family=family
+    )
+    # RFC 6749 §6: the new refresh token carries the same scope as the old one,
+    # whatever this particular access token was narrowed to.
+    new_refresh = issue_refresh_token(family, granted, refresh_binding(client, proof.jkt))
+    return TokenResponse(access_token, expires_in, format_scope(scope), new_refresh)
+
+
 GRANT_HANDLERS: dict[str, GrantHandler] = {
     Client.GrantType.AUTHORIZATION_CODE: authorization_code,
+    Client.GrantType.REFRESH_TOKEN: refresh_token,
 }

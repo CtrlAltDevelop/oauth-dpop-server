@@ -74,7 +74,8 @@ def server_settings() -> ServerSettings:
         signing_key_retention=int(
             _get("OAUTH_SIGNING_KEY_RETENTION", access_token_ttl + 3600),
         ),
-        key_encryption_secret=str(_get("OAUTH_KEY_ENCRYPTION_SECRET", settings.SECRET_KEY)),
+        # An empty value falls back too: an empty secret would still "work".
+        key_encryption_secret=str(_get("OAUTH_KEY_ENCRYPTION_SECRET", "") or settings.SECRET_KEY),
         token_rate_limit=int(_get("OAUTH_TOKEN_RATE_LIMIT", 60)),
         token_rate_window=int(_get("OAUTH_TOKEN_RATE_WINDOW", 60)),
     )

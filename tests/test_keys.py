@@ -1,11 +1,14 @@
 from datetime import timedelta
 
 import pytest
+from django.conf import settings
 from django.test import Client as HttpClient
+from django.test import override_settings
 from django.utils import timezone
 from joserfc import jwt
 from joserfc.jwk import KeySet
 
+from authserver.conf import server_settings
 from authserver.keys import published_jwks, rotate, sign_jwt
 from authserver.models import SigningKey
 
@@ -91,3 +94,8 @@ def test_the_jwks_endpoint_is_cacheable_json(client: HttpClient) -> None:
     assert response.status_code == 200
     assert "max-age" in response["Cache-Control"]
     assert len(response.json()["keys"]) == 2
+
+
+@override_settings(OAUTH_KEY_ENCRYPTION_SECRET="")
+def test_an_empty_encryption_secret_falls_back_rather_than_encrypting_under_nothing() -> None:
+    assert server_settings().key_encryption_secret == settings.SECRET_KEY

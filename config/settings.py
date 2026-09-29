@@ -122,10 +122,12 @@ if _env_bool("DJANGO_BEHIND_TLS_PROXY", False):
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 # --- Authorization server (see authserver/conf.py for every knob) ---------
-OAUTH_ISSUER = os.environ.get("OAUTH_ISSUER", "http://localhost:8000")
+OAUTH_ISSUER = os.environ.get("OAUTH_ISSUER") or "http://localhost:8000"
 # Private signing keys are encrypted with a key derived from this. Separate
 # from SECRET_KEY so rotating one does not orphan the other.
-OAUTH_KEY_ENCRYPTION_SECRET = os.environ.get("OAUTH_KEY_ENCRYPTION_SECRET", SECRET_KEY)
+# `or`, not a default: an empty variable (a copied .env.example) must not
+# become an empty encryption secret.
+OAUTH_KEY_ENCRYPTION_SECRET = os.environ.get("OAUTH_KEY_ENCRYPTION_SECRET") or SECRET_KEY
 
 
 def resource_server(issuer: str) -> dict[str, object]:

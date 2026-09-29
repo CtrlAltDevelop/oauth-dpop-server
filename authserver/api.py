@@ -18,6 +18,7 @@ from authserver.metadata import (
     server_metadata,
 )
 from authserver.proofs import nonce_headers, require_proof
+from authserver.ratelimit import enforce_token_rate_limit
 
 api = NinjaAPI(
     title="OAuth 2.1 Authorization Server",
@@ -68,6 +69,7 @@ def jwks(request: HttpRequest) -> JsonResponse:
 )
 def token(request: HttpRequest) -> JsonResponse:
     try:
+        enforce_token_rate_limit(request)
         params = form_params(request)
         client = authenticate_client(request, params)
         grant_type = params.get("grant_type")

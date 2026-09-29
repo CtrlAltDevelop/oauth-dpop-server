@@ -26,7 +26,7 @@ DESCRIPTIONS: dict[str, str] = {
     "invalid_dpop_proof": "The DPoP proof is invalid.",
     "use_dpop_nonce": "The authorization server requires a nonce in the DPoP proof.",
     "unsupported_token_type": "The token type is not supported.",
-    "slow_down": "Too many requests. Retry later.",
+    "temporarily_unavailable": "Too many requests. Retry after the time given in Retry-After.",
 }
 
 

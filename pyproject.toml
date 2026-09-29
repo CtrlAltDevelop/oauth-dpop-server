@@ -12,6 +12,7 @@ dependencies = [
     "django>=5.2,<5.3",
     "django-ninja>=1.7.1",
     "django-stubs-ext>=6.1.1",
+    "gunicorn>=26.2.0",
     "joserfc>=1.7.5",
     "psycopg[binary]>=3.3.6",
     "redis>=8.1.0",

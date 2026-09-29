@@ -1,0 +1,45 @@
+# Local stack: the server, Postgres and Redis. Development settings only —
+# the secrets below are placeholders, and DEBUG is on so they are accepted.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: oauth
+      POSTGRES_USER: oauth
+      POSTGRES_PASSWORD: oauth
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oauth"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  web:
+    build: .
+    command: >-
+      sh -c "python manage.py migrate --noinput &&
+             gunicorn config.wsgi --bind 0.0.0.0:8000 --workers 3 --access-logfile -"
+    environment:
+      DJANGO_DEBUG: "true"
+      DJANGO_SECRET_KEY: compose-dev-only-not-a-secret
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      DATABASE_URL: postgres://oauth:oauth@db:5432/oauth
+      REDIS_URL: redis://redis:6379/0
+      OAUTH_ISSUER: http://localhost:8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:

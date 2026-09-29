@@ -1,0 +1,107 @@
+# =============================================================================
+# CI — lint, types, tests, dependency audit, security scans, and interop with
+# the Dart dpop_client. The first two run the shared checks from
+# CtrlAltDevelop/ci-workflows; interop is specific to this repository.
+# =============================================================================
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, so a dependency that turns vulnerable is caught without a push.
+    - cron: "17 5 * * 1"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  backend:
+    name: Backend
+    uses: CtrlAltDevelop/ci-workflows/.github/workflows/python-backend.yml@v1
+    with:
+      python-version: "3.14"
+      # Exported from uv.lock with every dependency group, so mypy finds
+      # django-stubs and pytest finds fakeredis. `make requirements` rebuilds it;
+      # the `lockfile` job below fails if someone forgets.
+      requirements: requirements.txt
+      mypy: true
+      # The suite runs against the Postgres service; Redis is faked in-process.
+      redis: false
+
+  lockfile:
+    name: requirements.txt matches uv.lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+      - name: Export and compare
+        run: |
+          uv export --format requirements-txt --all-groups --no-emit-project --quiet -o /tmp/requirements.txt
+          diff -u requirements.txt /tmp/requirements.txt
+
+  security:
+    name: Security
+    uses: CtrlAltDevelop/ci-workflows/.github/workflows/security.yml@v1
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    with:
+      codeql: true
+      languages: '["python"]'
+      dependency-review: true
+
+  # The server against the client it was built to serve: the published Dart
+  # dpop_client, driven through discovery, the nonce round trip, a DPoP-bound
+  # token and calls to the example API — once in-process under pytest, once
+  # against a real server process and a real Redis.
+  interop:
+    name: Interop with dpop_client (Dart)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s
+          --health-timeout 3s --health-retries 10
+    defaults:
+      run:
+        working-directory: oauth-dpop-server
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: oauth-dpop-server
+          persist-credentials: false
+      # Sibling checkout: interop/dart depends on it by path (../../../dpop_client).
+      - uses: actions/checkout@v7
+        with:
+          repository: CtrlAltDevelop/dpop_client
+          path: dpop_client
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Install
+        run: uv sync --all-groups --frozen
+      - name: In-process (pytest live server)
+        run: uv run pytest -m interop -s
+      - name: Full stack (runserver and Redis)
+        env:
+          REDIS_URL: redis://localhost:6379/0
+        run: scripts/interop.sh

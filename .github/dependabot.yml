@@ -1,0 +1,32 @@
+# Actions first: an unpinned or abandoned action is the most direct route into
+# a pipeline that can execute code in this repository.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # uv.lock is the source of truth. Dependabot updates it but not the exported
+  # requirements.txt, so its PRs fail the `lockfile` CI job until someone runs
+  # `make requirements` on the branch — deliberately: that is the review step.
+  - package-ecosystem: uv
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      python-minor:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: pub
+    directory: /interop/dart
+    schedule:
+      interval: weekly

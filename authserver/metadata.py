@@ -14,6 +14,7 @@ JWKS_PATH = "/oauth/jwks"
 TOKEN_PATH = "/oauth/token"
 INTROSPECTION_PATH = "/oauth/introspect"
 REVOCATION_PATH = "/oauth/revoke"
+PAR_PATH = "/oauth/par"
 
 
 def server_metadata() -> dict[str, Any]:
@@ -28,6 +29,8 @@ def server_metadata() -> dict[str, Any]:
         "introspection_endpoint_auth_methods_supported": list(CONFIDENTIAL_AUTH_METHODS),
         "revocation_endpoint": conf.endpoint(REVOCATION_PATH),
         "revocation_endpoint_auth_methods_supported": list(CLIENT_AUTH_METHODS),
+        "pushed_authorization_request_endpoint": conf.endpoint(PAR_PATH),
+        "require_pushed_authorization_requests": False,
         "scopes_supported": sorted(conf.scopes),
         "response_types_supported": ["code"],
         "grant_types_supported": sorted(GRANT_HANDLERS),

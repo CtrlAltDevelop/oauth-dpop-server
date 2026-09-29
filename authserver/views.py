@@ -30,6 +30,7 @@ from authserver.authorization import (
 from authserver.conf import server_settings
 from authserver.errors import logger
 from authserver.models import Client
+from authserver.par import redeem
 
 _SESSION_KEY = "oauth_pending_requests"
 # Enough for a few tabs mid-flow; bounded so a script cannot bloat a session.
@@ -62,9 +63,15 @@ def _error_page(request: HttpRequest, reason: str) -> HttpResponse:
 @never_cache
 @require_GET
 def authorize(request: HttpRequest) -> HttpResponse:
-    """The authorization endpoint (OAuth 2.1 §4.1.1)."""
+    """The authorization endpoint (OAuth 2.1 §4.1.1, RFC 9126 §4)."""
+    lists = dict(request.GET.lists())
     try:
-        auth_request = validate_authorization_request(dict(request.GET.lists()))
+        if "request_uri" in lists:
+            # RFC 9126 §4: the pushed parameters are the request, and anything
+            # else in the query string besides client_id is ignored.
+            auth_request = redeem(lists.get("client_id", [""])[-1], lists["request_uri"][-1])
+        else:
+            auth_request = validate_authorization_request(lists)
     except UntrustedRedirect as exc:
         return _error_page(request, exc.reason)
     except AuthorizationError as exc:

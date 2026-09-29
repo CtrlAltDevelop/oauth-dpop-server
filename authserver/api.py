@@ -7,8 +7,16 @@ from authserver.clients import authenticate_client
 from authserver.errors import OAuthError
 from authserver.grants import GRANT_HANDLERS
 from authserver.http import form_params, form_schema, no_store
+from authserver.introspection import introspect, revoke
 from authserver.keys import published_jwks
-from authserver.metadata import JWKS_PATH, METADATA_PATH, TOKEN_PATH, server_metadata
+from authserver.metadata import (
+    INTROSPECTION_PATH,
+    JWKS_PATH,
+    METADATA_PATH,
+    REVOCATION_PATH,
+    TOKEN_PATH,
+    server_metadata,
+)
 from authserver.proofs import nonce_headers, require_proof
 
 api = NinjaAPI(
@@ -76,3 +84,71 @@ def token(request: HttpRequest) -> JsonResponse:
     except OAuthError as exc:
         return no_store(exc.response(), nonce_headers())
     return no_store(JsonResponse(result.as_dict()), nonce_headers())
+
+
+def _token_param(params: dict[str, str]) -> str:
+    token = params.get("token")
+    if not token:
+        raise OAuthError("invalid_request", "token is required")
+    return token
+
+
+@api.post(
+    INTROSPECTION_PATH,
+    tags=["oauth"],
+    summary="Token introspection (RFC 7662)",
+    description=(
+        "Confidential clients only. A client may introspect its own tokens; a client registered "
+        "with `can_introspect` (a resource server) may introspect any. Everything else, "
+        'including unknown tokens, answers `{"active": false}`.'
+    ),
+    openapi_extra=form_schema(
+        {
+            "token": "The token to describe",
+            "token_type_hint": "access_token or refresh_token (optional; never needed)",
+            "client_id": "client_secret_post",
+            "client_secret": "client_secret_post",
+        },
+        required=["token"],
+    ),
+)
+def introspection(request: HttpRequest) -> JsonResponse:
+    try:
+        params = form_params(request)
+        client = authenticate_client(request, params)
+        if not client.is_confidential:
+            # RFC 7662 §2.1: the endpoint requires authorization, and a public
+            # client has nothing to authenticate with.
+            raise OAuthError("invalid_client", "public clients may not introspect", status=401)
+        body = introspect(client, _token_param(params))
+    except OAuthError as exc:
+        return exc.response()
+    return no_store(JsonResponse(body))
+
+
+@api.post(
+    REVOCATION_PATH,
+    tags=["oauth"],
+    summary="Token revocation (RFC 7009)",
+    description=(
+        "Revoking a refresh token revokes every token of its grant. Unknown tokens and tokens "
+        "of other clients succeed without effect (RFC 7009 §2.2)."
+    ),
+    openapi_extra=form_schema(
+        {
+            "token": "The token to revoke",
+            "token_type_hint": "access_token or refresh_token (optional; never needed)",
+            "client_id": "public clients, and client_secret_post",
+            "client_secret": "client_secret_post",
+        },
+        required=["token"],
+    ),
+)
+def revocation(request: HttpRequest) -> JsonResponse:
+    try:
+        params = form_params(request)
+        client = authenticate_client(request, params)
+        revoke(client, _token_param(params))
+    except OAuthError as exc:
+        return exc.response()
+    return no_store(JsonResponse({}))

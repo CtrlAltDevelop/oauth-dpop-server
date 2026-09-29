@@ -12,7 +12,8 @@ from authserver.errors import OAuthError
 from authserver.models import Client
 
 # RFC 8414 §2 names for the methods `authenticate_client` accepts.
-CLIENT_AUTH_METHODS = ("client_secret_basic", "client_secret_post", "none")
+CONFIDENTIAL_AUTH_METHODS = ("client_secret_basic", "client_secret_post")
+CLIENT_AUTH_METHODS = (*CONFIDENTIAL_AUTH_METHODS, "none")
 
 _LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 

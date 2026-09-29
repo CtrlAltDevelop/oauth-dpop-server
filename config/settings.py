@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "authserver",
+    "demo_api",
 ]
 
 MIDDLEWARE = [
@@ -119,6 +120,28 @@ if _env_bool("DJANGO_BEHIND_TLS_PROXY", False):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
+# --- Authorization server (see authserver/conf.py for every knob) ---------
+OAUTH_ISSUER = os.environ.get("OAUTH_ISSUER", "http://localhost:8000")
+# Private signing keys are encrypted with a key derived from this. Separate
+# from SECRET_KEY so rotating one does not orphan the other.
+OAUTH_KEY_ENCRYPTION_SECRET = os.environ.get("OAUTH_KEY_ENCRYPTION_SECRET", SECRET_KEY)
+
+
+def resource_server(issuer: str) -> dict[str, object]:
+    """``NINJA_DPOP`` for the example API, which shares this process."""
+    return {
+        "ISSUER": issuer,
+        "AUDIENCE": f"{issuer}/api",
+        "ORIGIN": issuer,
+        # In-process, so the keys are read straight from the database. A
+        # separate resource server would use f"{issuer}/oauth/jwks".
+        "JWKS": "authserver.keys.published_jwks",
+        "REDIS": "authserver.redis.get_redis",
+    }
+
+
+NINJA_DPOP = resource_server(OAUTH_ISSUER)
 
 LOGGING = {
     "version": 1,

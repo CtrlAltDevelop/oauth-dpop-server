@@ -15,4 +15,5 @@ from config.settings import *  # noqa: F403
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 OAUTH_ISSUER = "https://auth.example.test"
+NINJA_DPOP = resource_server(OAUTH_ISSUER)  # noqa: F405
 ALLOWED_HOSTS = ["testserver", "auth.example.test"]

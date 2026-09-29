@@ -34,11 +34,11 @@ def orders(request):
 NINJA_DPOP = {
     "ISSUER": "https://auth.example.com",
     "AUDIENCE": "https://api.example.com",
-    "ORIGIN": "https://api.example.com",          # what htu is checked against
+    "ORIGIN": "https://api.example.com",  # what htu is checked against
     "JWKS": "https://auth.example.com/oauth/jwks",  # or a dotted callable
-    "REDIS": "myproject.redis.get_redis",          # callable returning redis.Redis
+    "REDIS": "myproject.redis.get_redis",  # callable returning redis.Redis
     # Optional, defaults shown:
-    "ALGORITHMS": ["ES256"],        # accepted DPoP proof algorithms
+    "ALGORITHMS": ["ES256"],  # accepted DPoP proof algorithms
     "TOKEN_ALGORITHMS": ["ES256"],  # accepted access token algorithms
     "PROOF_MAX_AGE": 60,
     "CLOCK_SKEW": 5,

@@ -1,0 +1,14 @@
+name: dpop_interop
+description: >-
+  Drives the Dart dpop_client against a live oauth-dpop-server, end to end.
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  # The client under test, from a sibling checkout. CI checks it out next to
+  # this repository; locally it is expected at ../dpop_client as well.
+  dpop_client:
+    path: ../../../dpop_client
+  http: ^1.5.0

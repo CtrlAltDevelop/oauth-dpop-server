@@ -155,7 +155,33 @@ def _rotate_refresh_token(
     return TokenResponse(access_token, expires_in, format_scope(scope), new_refresh)
 
 
+def client_credentials(
+    client: Client, params: dict[str, str], proof: VerifiedProof
+) -> TokenResponse:
+    """A client acting on its own behalf (OAuth 2.1 §4.2).
+
+    Confidential clients only: the grant *is* the client's credentials, so a
+    public client would be authenticating nothing. No refresh token either —
+    the client can simply ask again (OAuth 2.1 §4.2.3).
+    """
+    if not client.is_confidential:
+        raise OAuthError("unauthorized_client", "client_credentials needs a confidential client")
+    requested = params.get("scope")
+    if requested is None:
+        scope = list(client.scopes)
+    else:
+        try:
+            scope = parse_scope(requested)
+        except ValueError:
+            raise OAuthError("invalid_scope", "scope is malformed") from None
+    if not scope or not set(scope) <= set(client.scopes):
+        raise OAuthError("invalid_scope", "scope exceeds the client's registration")
+    access_token, expires_in = issue_access_token(client=client, scope=scope, jkt=proof.jkt)
+    return TokenResponse(access_token, expires_in, format_scope(scope))
+
+
 GRANT_HANDLERS: dict[str, GrantHandler] = {
+    Client.GrantType.CLIENT_CREDENTIALS: client_credentials,
     Client.GrantType.AUTHORIZATION_CODE: authorization_code,
     Client.GrantType.REFRESH_TOKEN: refresh_token,
 }

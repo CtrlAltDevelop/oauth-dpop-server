@@ -45,3 +45,12 @@ def test_metadata_describes_the_token_endpoint(client: HttpClient) -> None:
         "client_secret_post",
         "none",
     }
+
+
+def test_metadata_lists_every_grant(client: HttpClient) -> None:
+    body = client.get("/.well-known/oauth-authorization-server").json()
+    assert body["grant_types_supported"] == [
+        "authorization_code",
+        "client_credentials",
+        "refresh_token",
+    ]

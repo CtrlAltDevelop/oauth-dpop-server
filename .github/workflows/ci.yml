@@ -24,6 +24,8 @@ jobs:
   backend:
     name: Backend
     uses: CtrlAltDevelop/ci-workflows/.github/workflows/python-backend.yml@v1.1.1
+    permissions:
+      contents: read
     with:
       python-version: "3.14"
       # Exported from uv.lock with every dependency group, so mypy finds
@@ -45,10 +47,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v7
+      # Exported in place: the header uv writes names the output path.
       - name: Export and compare
         run: |
-          uv export --format requirements-txt --all-groups --no-emit-project --quiet -o /tmp/requirements.txt
-          diff -u requirements.txt /tmp/requirements.txt
+          uv export --format requirements-txt --all-groups --no-emit-project --quiet -o requirements.txt
+          git diff --exit-code requirements.txt
 
   security:
     name: Security

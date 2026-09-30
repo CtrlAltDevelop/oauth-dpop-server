@@ -1,6 +1,11 @@
 # oauth-dpop-server
 
 [![CI](https://github.com/CtrlAltDevelop/oauth-dpop-server/actions/workflows/ci.yml/badge.svg)](https://github.com/CtrlAltDevelop/oauth-dpop-server/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/CtrlAltDevelop/oauth-dpop-server)](https://github.com/CtrlAltDevelop/oauth-dpop-server/releases)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
+![Django](https://img.shields.io/badge/django-5.2-green)
+![PostgreSQL](https://img.shields.io/badge/postgresql-16-336791)
+[![RFC 9449](https://img.shields.io/badge/RFC-9449%20DPoP-orange)](https://www.rfc-editor.org/rfc/rfc9449)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A small, standards-exact **OAuth 2.1 authorization server** whose every

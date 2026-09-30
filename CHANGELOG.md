@@ -6,6 +6,10 @@ uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Django 6.1 is supported alongside 5.2.
+
 ## [0.1.0] - 2026-09-29
 
 The first release.

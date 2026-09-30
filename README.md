@@ -3,7 +3,7 @@
 [![CI](https://github.com/CtrlAltDevelop/oauth-dpop-server/actions/workflows/ci.yml/badge.svg)](https://github.com/CtrlAltDevelop/oauth-dpop-server/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/CtrlAltDevelop/oauth-dpop-server)](https://github.com/CtrlAltDevelop/oauth-dpop-server/releases)
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue)
-![Django](https://img.shields.io/badge/django-5.2-green)
+![Django](https://img.shields.io/badge/django-5.2%20%7C%206.1-green)
 ![PostgreSQL](https://img.shields.io/badge/postgresql-16-336791)
 [![RFC 9449](https://img.shields.io/badge/RFC-9449%20DPoP-orange)](https://www.rfc-editor.org/rfc/rfc9449)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -19,7 +19,7 @@ It is the server-side counterpart of
 package that signs DPoP proofs, and CI runs that client against this server
 on every push.
 
-Django 5.2, Django Ninja, PostgreSQL, Redis and `joserfc`. There are no
+Django 5.2 or 6.1, Django Ninja, PostgreSQL, Redis and `joserfc`. There are no
 hand-rolled cryptographic primitives.
 
 ## What it does

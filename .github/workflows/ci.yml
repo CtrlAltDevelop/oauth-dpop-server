@@ -63,7 +63,6 @@ jobs:
     with:
       codeql: true
       languages: '["python"]'
-      dependency-review: true
 
   # The server against the client it was built to serve: the published Dart
   # dpop_client, driven through discovery, the nonce round trip, a DPoP-bound

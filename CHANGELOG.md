@@ -6,6 +6,8 @@ uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-15
+
 ### Added
 
 - `manage.py purge_expired` deletes expired authorization codes, pushed
@@ -59,5 +61,6 @@ The first release.
 - A Docker image, a Compose stack, and CI through the shared
   `ci-workflows`.
 
-[Unreleased]: https://github.com/CtrlAltDevelop/oauth-dpop-server/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/CtrlAltDevelop/oauth-dpop-server/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/CtrlAltDevelop/oauth-dpop-server/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/CtrlAltDevelop/oauth-dpop-server/releases/tag/v0.1.0

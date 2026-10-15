@@ -1,6 +1,6 @@
 [project]
 name = "oauth-dpop-server"
-version = "0.1.0"
+version = "0.2.0"
 description = "An OAuth 2.1 authorization server that issues DPoP-bound access tokens (RFC 9449)."
 readme = "README.md"
 license = "MIT"

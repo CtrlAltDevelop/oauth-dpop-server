@@ -12,7 +12,7 @@ def parse_scope(value: str) -> list[str]:
     Raises ``ValueError`` if any token is outside RFC 6749's grammar.
     """
     tokens = value.split(" ")
-    if not all(_SCOPE_TOKEN.match(token) for token in tokens):
+    if not all(_SCOPE_TOKEN.fullmatch(token) for token in tokens):
         raise ValueError("malformed scope")
     return list(dict.fromkeys(tokens))
 

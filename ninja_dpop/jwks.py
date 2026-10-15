@@ -8,6 +8,7 @@ values cannot turn this server into a load generator aimed at the issuer.
 """
 
 import json
+import logging
 import threading
 import time
 import urllib.request
@@ -15,6 +16,8 @@ from typing import Any
 
 from django.utils.module_loading import import_string
 from joserfc.jwk import KeySet
+
+logger = logging.getLogger("ninja_dpop")
 
 _REFETCH_FLOOR = 30
 _TIMEOUT = 5
@@ -25,6 +28,7 @@ class _CachedKeySet:
     def __init__(self) -> None:
         self.keys: KeySet | None = None
         self.fetched_at = 0.0
+        self.failed_at = float("-inf")
         self.lock = threading.Lock()
 
 
@@ -62,9 +66,22 @@ def key_set(source: str, *, max_age: int, kid: str | None = None) -> KeySet:
             and not any(key.kid == kid for key in entry.keys.keys)
             and now - entry.fetched_at > _REFETCH_FLOOR
         )
-        if entry.keys is None or stale or unknown:
+        if entry.keys is not None and not (stale or unknown):
+            return entry.keys
+        if entry.keys is not None and now - entry.failed_at <= _REFETCH_FLOOR:
+            return entry.keys
+        try:
             entry.keys = KeySet.import_key_set(_load(source))  # type: ignore[arg-type]
-            entry.fetched_at = now
+        except Exception:
+            if entry.keys is None:
+                raise
+            # The issuer is unreachable or answered garbage. The keys we hold
+            # verified tokens a moment ago; keep using them and back off rather
+            # than failing every request, each one waiting out the timeout.
+            logger.warning("JWKS refresh from %s failed; keeping cached keys", source)
+            entry.failed_at = now
+            return entry.keys
+        entry.fetched_at = now
         return entry.keys
 
 

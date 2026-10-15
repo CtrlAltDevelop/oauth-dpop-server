@@ -6,9 +6,25 @@ uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `manage.py purge_expired` deletes expired authorization codes, pushed
+  requests, token families and access tokens, which otherwise accumulate
+  forever.
+
 ### Changed
 
 - Django 6.1 is supported alongside 5.2.
+- Dependencies updated to their latest releases.
+
+### Fixed
+
+- `ninja_dpop` keeps serving its cached signing keys when a JWKS refresh
+  fails, and waits before retrying, instead of failing every request.
+- PKCE challenges, scope tokens and DPoP nonces with a trailing newline are
+  refused rather than slipping past an anchored pattern.
+- The system-check smoke test runs with database access, which Django 6.1's
+  JSONField check needs.
 
 ## [0.1.0] - 2026-09-29
 

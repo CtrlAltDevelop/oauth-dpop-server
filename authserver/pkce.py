@@ -19,7 +19,7 @@ _CHALLENGE = re.compile(r"^[A-Za-z0-9\-_]{43}$")
 
 
 def is_valid_challenge(challenge: str) -> bool:
-    return bool(_CHALLENGE.match(challenge))
+    return bool(_CHALLENGE.fullmatch(challenge))
 
 
 def s256(verifier: str) -> str:
@@ -29,6 +29,6 @@ def s256(verifier: str) -> str:
 
 def verify(verifier: str, challenge: str) -> bool:
     """Whether ``verifier`` answers ``challenge`` (RFC 7636 §4.6)."""
-    if not _VERIFIER.match(verifier):
+    if not _VERIFIER.fullmatch(verifier):
         return False
     return hmac.compare_digest(s256(verifier).encode("ascii"), challenge.encode("ascii"))

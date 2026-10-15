@@ -100,6 +100,8 @@ DJANGO_DEBUG=true uv run python manage.py create_client "Mobile app" --type publ
 A confidential client's secret is printed once and stored only as a digest.
 Signing keys are generated on first use and encrypted in the database. Rotate
 them on a schedule with `make keys` (`manage.py rotate_signing_keys`).
+Expired codes, tokens and pushed requests pile up in the database until
+`manage.py purge_expired` deletes them; schedule that too.
 
 ### Getting a token from Dart
 

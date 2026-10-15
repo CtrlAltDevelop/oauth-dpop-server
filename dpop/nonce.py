@@ -59,6 +59,6 @@ class RedisNonceStore:
         return _text(winner) if winner is not None else candidate
 
     def is_valid(self, nonce: str) -> bool:
-        if not _NONCE_SHAPE.match(nonce):
+        if not _NONCE_SHAPE.fullmatch(nonce):
             return False
         return bool(self._redis.exists(f"{self._valid_prefix}{nonce}"))

@@ -57,7 +57,7 @@ sequenceDiagram
     participant R as Redis
     participant RS as Resource server (ninja_dpop)
 
-    Note over C: generates an ES256 key pair once;<br/>the private key never leaves the device
+    Note over C: generates an ES256 key pair once, and<br/>the private key never leaves the device
     C->>AS: POST /oauth/token<br/>DPoP: proof{htm, htu, iat, jti}
     AS->>R: nonce current?
     AS-->>C: 400 use_dpop_nonce<br/>DPoP-Nonce: n1
@@ -65,7 +65,7 @@ sequenceDiagram
     AS->>AS: verify typ, alg, jwk is public, signature,<br/>htm, htu, iat window, nonce
     AS->>R: SET jkt:jti NX EX 70 (replay cache)
     AS-->>C: 200 {access_token: JWT{cnf.jkt = thumbprint(jwk)},<br/>token_type: "DPoP", refresh_token}<br/>DPoP-Nonce: n1
-    C->>RS: GET /api/orders<br/>Authorization: DPoP <token><br/>DPoP: proof{…, ath = SHA-256(token)}
+    C->>RS: GET /api/orders<br/>Authorization: DPoP #lt;token#gt;<br/>DPoP: proof{…, ath = SHA-256(token)}
     RS->>RS: verify token (JWKS, iss, aud, exp, cnf.jkt)
     RS->>RS: verify proof: key = cnf.jkt, ath matches, htm/htu
     RS->>R: SET jkt:jti NX EX 70

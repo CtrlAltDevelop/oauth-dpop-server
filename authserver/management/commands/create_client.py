@@ -28,6 +28,13 @@ class Command(BaseCommand):
         parser.add_argument("--redirect-uri", dest="redirect_uris", action="append", default=[])
         parser.add_argument("--scope", dest="scopes", action="append", default=[])
         parser.add_argument(
+            "--resource",
+            dest="resources",
+            action="append",
+            default=[],
+            help="A resource (RFC 8707, from OAUTH_RESOURCES) the client may request tokens for.",
+        )
+        parser.add_argument(
             "--introspect",
             action="store_true",
             help="Allow this client to introspect tokens issued to other clients.",
@@ -42,6 +49,7 @@ class Command(BaseCommand):
                 grant_types=options["grant_types"],
                 redirect_uris=options["redirect_uris"],
                 scopes=options["scopes"],
+                resources=options["resources"],
                 can_introspect=options["introspect"],
             )
         except ValueError as exc:

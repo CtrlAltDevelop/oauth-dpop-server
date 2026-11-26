@@ -100,6 +100,7 @@ def consent(request: HttpRequest) -> HttpResponse:
             {
                 "client": client,
                 "scopes": [(name, scopes.get(name, name)) for name in auth_request.scope],
+                "resources": auth_request.resources,
                 # Shown so the user can see where they are being sent back to.
                 "redirect_target": urlsplit(auth_request.redirect_uri).netloc
                 or auth_request.redirect_uri,

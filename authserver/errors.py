@@ -22,6 +22,7 @@ DESCRIPTIONS: dict[str, str] = {
     "unsupported_grant_type": "The grant type is not supported.",
     "unsupported_response_type": "The response type is not supported.",
     "invalid_scope": "The requested scope is invalid or exceeds what the client may request.",
+    "invalid_target": "The requested resource is invalid, unknown, or not covered by the grant.",
     "access_denied": "The resource owner denied the request.",
     "invalid_dpop_proof": "The DPoP proof is invalid.",
     "use_dpop_nonce": "The authorization server requires a nonce in the DPoP proof.",

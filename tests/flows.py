@@ -27,7 +27,9 @@ def basic_auth(client_id: str, secret: str) -> str:
     return "Basic " + base64.b64encode(f"{client_id}:{secret}".encode()).decode()
 
 
-def obtain_code(client: Client, user: User, *, scope: str = "orders:read", **extra: str) -> str:
+def obtain_code(
+    client: Client, user: User, *, scope: str = "orders:read", **extra: str | list[str]
+) -> str:
     """Sign in, approve consent, and return the authorization code."""
     browser = HttpClient()
     browser.force_login(user)

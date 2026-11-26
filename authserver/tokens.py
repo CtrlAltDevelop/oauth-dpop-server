@@ -55,6 +55,7 @@ def issue_access_token(
     client: Client,
     scope: list[str],
     jkt: str,
+    audience: str,
     family: TokenFamily | None = None,
 ) -> tuple[str, int]:
     """Sign a DPoP-bound access token and record it; return it with its lifetime."""
@@ -71,7 +72,7 @@ def issue_access_token(
     claims: dict[str, Any] = {
         "iss": conf.issuer,
         "sub": subject,
-        "aud": conf.audience,
+        "aud": audience,
         "client_id": client.client_id,
         "iat": int(now.timestamp()),
         "exp": int(expires_at.timestamp()),
@@ -89,7 +90,7 @@ def issue_access_token(
         family=family,
         user=user,
         subject=subject,
-        audience=conf.audience,
+        audience=audience,
         scope=format_scope(scope),
         jkt=jkt,
         issued_at=now,
@@ -128,12 +129,18 @@ def refresh_binding(client: Client, jkt: str) -> str | None:
 
 
 def new_family(
-    client: Client, *, user_id: int | None, scope: list[str], auth_time: datetime | None
+    client: Client,
+    *,
+    user_id: int | None,
+    scope: list[str],
+    resources: list[str],
+    auth_time: datetime | None,
 ) -> TokenFamily:
     return TokenFamily.objects.create(
         client=client,
         user_id=user_id,
         scope=format_scope(scope),
+        resources=resources,
         auth_time=auth_time,
         expires_at=timezone.now() + timedelta(seconds=server_settings().refresh_family_ttl),
     )

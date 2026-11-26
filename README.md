@@ -153,6 +153,7 @@ docstring. File paths are relative to `tests/`.
 
 | RFC | Section | Requirement | Tests |
 |---|---|---|---|
+| 8707 | §2 | `resource` selects a single audience; unknown or out-of-grant resources are `invalid_target` | `test_resource_indicators.py` |
 | 9449 | §4.3 step 1 | At most one `DPoP` header | `dpop/test_proof.py::test_more_than_one_dpop_header_is_refused`, `::test_folded_dpop_headers_are_refused`, `test_token_endpoint.py::test_two_dpop_headers_are_refused` |
 | 9449 | §4.3 step 2 | A well-formed JWT | `dpop/test_proof.py::test_a_proof_that_is_not_a_jwt_is_refused`, `::test_a_payload_that_is_not_an_object_is_refused` |
 | 9449 | §4.3 step 3, §4.2 | `typ`, `alg`, `jwk`, `jti`, `htm`, `htu`, `iat` present | `dpop/test_proof.py::test_every_required_member_must_be_present`, `::test_iat_must_be_an_integer` |
@@ -254,6 +255,8 @@ or Django settings. The `OAUTH_*` settings are listed in
 | Setting | Default | |
 |---|---|---|
 | `OAUTH_ISSUER` | `http://localhost:8000` | The issuer identifier. Every `htu` at this server is checked against it. |
+| `OAUTH_ACCESS_TOKEN_AUDIENCE` | `<issuer>/api` | The default `aud`, used when a request names no `resource`. |
+| `OAUTH_RESOURCES` | `[]` | Further resource identifiers (RFC 8707) a client may request. The default audience is always allowed. |
 | `OAUTH_ACCESS_TOKEN_TTL` | 300 s | |
 | `OAUTH_REFRESH_TOKEN_TTL` / `OAUTH_REFRESH_FAMILY_TTL` | 14 / 30 days | Per token, and the absolute lifetime of a grant. |
 | `OAUTH_DPOP_ALGORITHMS` | ES256, ES384, Ed25519, PS256 | |
@@ -292,8 +295,8 @@ docs/adr/     architecture decision records
   discovery beyond RFC 8414.
 - **No dynamic client registration** (RFC 7591). Clients are registered with
   `manage.py create_client` or the admin.
-- **One audience.** Resource indicators (RFC 8707) are not implemented, so
-  every token's `aud` is `OAUTH_ACCESS_TOKEN_AUDIENCE`.
+- **One audience per token.** Resource indicators (RFC 8707) are supported,
+  but a token request names at most one `resource`.
 - **DPoP only.** There is no bearer-token fallback and no mTLS (RFC 8705);
   see ADR 0005.
 - **Consent is not remembered.** Every authorization asks again.

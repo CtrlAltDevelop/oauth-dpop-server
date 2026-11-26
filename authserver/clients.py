@@ -45,6 +45,7 @@ def register_client(
     grant_types: list[str],
     redirect_uris: list[str],
     scopes: list[str],
+    resources: list[str] | None = None,
     can_introspect: bool = False,
 ) -> tuple[Client, str | None]:
     """Create a client, returning it with its plaintext secret (if any).
@@ -69,6 +70,10 @@ def register_client(
     if unknown_scopes:
         raise ValueError(f"unknown scopes: {sorted(unknown_scopes)}")
 
+    unknown_resources = set(resources or []) - set(server_settings().resources)
+    if unknown_resources:
+        raise ValueError(f"unregistered resources: {sorted(unknown_resources)}")
+
     secret = new_token() if confidential else None
     client = Client.objects.create(
         client_id=new_token(),
@@ -78,6 +83,7 @@ def register_client(
         redirect_uris=list(redirect_uris),
         grant_types=list(dict.fromkeys(grant_types)),
         scopes=list(dict.fromkeys(scopes)),
+        resources=list(dict.fromkeys(resources or [])),
         can_introspect=can_introspect,
     )
     return client, secret

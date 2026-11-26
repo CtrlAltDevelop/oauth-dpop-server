@@ -26,12 +26,20 @@ from ninja_dpop import jwks
 def test_purge_deletes_expired_rows_and_keeps_live_ones(public_client: Client, user: User) -> None:
     now = timezone.now()
     past = now - timedelta(days=1)
-    live = new_family(public_client, user_id=user.pk, scope=["profile"], auth_time=now)
-    dead = new_family(public_client, user_id=user.pk, scope=["profile"], auth_time=now)
+    live = new_family(
+        public_client, user_id=user.pk, scope=["profile"], resources=[], auth_time=now
+    )
+    dead = new_family(
+        public_client, user_id=user.pk, scope=["profile"], resources=[], auth_time=now
+    )
     issue_refresh_token(live, ["profile"], None)
     issue_refresh_token(dead, ["profile"], None)
-    issue_access_token(client=public_client, scope=["profile"], jkt="k", family=dead)
-    issue_access_token(client=public_client, scope=["profile"], jkt="k", family=live)
+    issue_access_token(
+        audience="aud", client=public_client, scope=["profile"], jkt="k", family=dead
+    )
+    issue_access_token(
+        audience="aud", client=public_client, scope=["profile"], jkt="k", family=live
+    )
     TokenFamily.objects.filter(pk=dead.pk).update(expires_at=past)
     code = {"client": public_client, "user": user, "redirect_uri": "x", "scope": "profile"}
     code |= {"code_challenge": "c", "auth_time": now, "expires_at": past}

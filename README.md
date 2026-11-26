@@ -5,8 +5,11 @@
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue)
 ![Django](https://img.shields.io/badge/django-5.2%20%7C%206.1-green)
 ![PostgreSQL](https://img.shields.io/badge/postgresql-16-336791)
+![Redis](https://img.shields.io/badge/redis-7-DC382D)
+![Docker](https://img.shields.io/badge/docker-compose-2496ED)
 [![RFC 9449](https://img.shields.io/badge/RFC-9449%20DPoP-orange)](https://www.rfc-editor.org/rfc/rfc9449)
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![license: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![last commit](https://img.shields.io/github/last-commit/CtrlAltDevelop/oauth-dpop-server)](https://github.com/CtrlAltDevelop/oauth-dpop-server/commits/main)
 
 A small, standards-exact **OAuth 2.1 authorization server** whose every
 access token is **sender-constrained with DPoP**
@@ -310,6 +313,10 @@ docs/adr/     architecture decision records
 - [`ci-workflows`](https://github.com/CtrlAltDevelop/ci-workflows): the shared
   CI this repository calls.
 
+## Contributing and security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
-[MIT](LICENSE) © 2026 Mohammad Zarif
+[AGPL-3.0-only](LICENSE) © 2026 Mohammad Zarif

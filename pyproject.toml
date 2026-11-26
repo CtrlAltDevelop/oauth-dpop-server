@@ -10,12 +10,12 @@ dependencies = [
     "cryptography>=50.0.1",
     "dj-database-url>=3.1.2",
     "django>=5.2,<6.2",
-    "django-ninja>=1.7.1",
+    "django-ninja>=1.8.0",
     "django-stubs-ext>=6.1.1",
-    "gunicorn>=26.2.0",
-    "joserfc>=1.7.5",
-    "psycopg[binary]>=3.3.6",
-    "redis>=8.1.0",
+    "gunicorn>=27.0.1",
+    "joserfc>=1.8.0",
+    "psycopg[binary]>=3.3.9",
+    "redis>=8.2.0",
 ]
 
 [dependency-groups]
@@ -23,10 +23,10 @@ dev = [
     "django-stubs>=5.2,<6.2",
     "fakeredis>=2.38.0",
     "mypy>=2.3.1",
-    "pytest>=9.1.1",
+    "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "pytest-django>=4.14.0",
-    "ruff>=0.16.9",
+    "ruff>=0.17.6",
 ]
 
 # An application, not a library: nothing here is built or published.

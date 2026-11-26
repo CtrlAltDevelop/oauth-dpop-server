@@ -21,6 +21,8 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
+from authserver.conf import server_settings
+
 
 class Client(models.Model):
     """A registered OAuth client (RFC 6749 §2)."""
@@ -45,6 +47,9 @@ class Client(models.Model):
     redirect_uris = models.JSONField(default=list, blank=True)
     grant_types = models.JSONField(default=list)
     scopes = models.JSONField(default=list)
+    # RFC 8707: resources this client may request tokens for, beyond the
+    # default audience, which is always allowed.
+    resources = models.JSONField(default=list, blank=True)
     # A resource server may introspect any token; other clients only their own.
     can_introspect = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
@@ -58,6 +63,9 @@ class Client(models.Model):
 
     def allows_grant(self, grant_type: str) -> bool:
         return grant_type in self.grant_types
+
+    def allows_resource(self, resource: str) -> bool:
+        return resource == server_settings().audience or resource in self.resources
 
 
 class AuthorizationCode(models.Model):
@@ -73,6 +81,8 @@ class AuthorizationCode(models.Model):
     # RFC 9449 §10: the key the client committed to at the authorization
     # endpoint, if it did. The token request must then prove that key.
     dpop_jkt = models.CharField(max_length=128, blank=True)
+    # RFC 8707: the resources the request named. Empty means the default audience.
+    resources = models.JSONField(default=list, blank=True)
     auth_time = models.DateTimeField()
     expires_at = models.DateTimeField()
     redeemed_at = models.DateTimeField(null=True, blank=True)
@@ -107,6 +117,8 @@ class TokenFamily(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE
     )
     scope = models.TextField()
+    # RFC 8707: what the grant covers; every refresh stays within it.
+    resources = models.JSONField(default=list, blank=True)
     auth_time = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     # An absolute ceiling: rotation extends a refresh token, never the family.

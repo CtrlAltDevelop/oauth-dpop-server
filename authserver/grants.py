@@ -18,6 +18,7 @@ from authserver import pkce
 from authserver.credentials import constant_time_equals, digest
 from authserver.errors import OAuthError
 from authserver.models import AuthorizationCode, Client, RefreshToken, TokenFamily
+from authserver.resources import audience_for, client_credentials_audience
 from authserver.scopes import format_scope, parse_scope
 from authserver.tokens import (
     TokenResponse,
@@ -44,7 +45,7 @@ def authorization_code(
 ) -> TokenResponse:
     """Redeem an authorization code (OAuth 2.1 §4.1.3)."""
     code, verifier, redirect_uri = _require(params, "code", "code_verifier", "redirect_uri")
-    outcome = _redeem_code(client, code, verifier, redirect_uri, proof)
+    outcome = _redeem_code(client, code, verifier, redirect_uri, params.get("resource"), proof)
     if isinstance(outcome, OAuthError):
         raise outcome
     return outcome
@@ -52,7 +53,12 @@ def authorization_code(
 
 @transaction.atomic
 def _redeem_code(
-    client: Client, code: str, verifier: str, redirect_uri: str, proof: VerifiedProof
+    client: Client,
+    code: str,
+    verifier: str,
+    redirect_uri: str,
+    resource: str | None,
+    proof: VerifiedProof,
 ) -> TokenResponse | OAuthError:
     record = AuthorizationCode.objects.select_for_update().filter(code_hash=digest(code)).first()
     if record is None or record.client_id != client.pk:
@@ -81,12 +87,23 @@ def _redeem_code(
         # to with dpop_jkt at the authorization endpoint.
         return OAuthError("invalid_dpop_proof", "proof key differs from dpop_jkt")
 
+    try:
+        audience = audience_for(resource, record.resources)
+    except OAuthError as exc:
+        return exc
+
     scope = parse_scope(record.scope)
-    family = new_family(client, user_id=record.user_id, scope=scope, auth_time=record.auth_time)
+    family = new_family(
+        client,
+        user_id=record.user_id,
+        scope=scope,
+        resources=record.resources,
+        auth_time=record.auth_time,
+    )
     record.family = family
     record.save(update_fields=["family"])
     access_token, expires_in = issue_access_token(
-        client=client, scope=scope, jkt=proof.jkt, family=family
+        client=client, scope=scope, jkt=proof.jkt, audience=audience, family=family
     )
     refresh_token = None
     if client.allows_grant(Client.GrantType.REFRESH_TOKEN):
@@ -97,7 +114,9 @@ def _redeem_code(
 def refresh_token(client: Client, params: dict[str, str], proof: VerifiedProof) -> TokenResponse:
     """Rotate a refresh token (OAuth 2.1 §4.3), detecting reuse."""
     (token,) = _require(params, "refresh_token")
-    outcome = _rotate_refresh_token(client, token, params.get("scope"), proof)
+    outcome = _rotate_refresh_token(
+        client, token, params.get("scope"), params.get("resource"), proof
+    )
     if isinstance(outcome, OAuthError):
         raise outcome
     return outcome
@@ -105,7 +124,11 @@ def refresh_token(client: Client, params: dict[str, str], proof: VerifiedProof) 
 
 @transaction.atomic
 def _rotate_refresh_token(
-    client: Client, token: str, requested_scope: str | None, proof: VerifiedProof
+    client: Client,
+    token: str,
+    requested_scope: str | None,
+    params_resource: str | None,
+    proof: VerifiedProof,
 ) -> TokenResponse | OAuthError:
     record = RefreshToken.objects.select_for_update().filter(token_hash=digest(token)).first()
     if record is None:
@@ -144,10 +167,15 @@ def _rotate_refresh_token(
         if not set(scope) <= set(granted):
             return OAuthError("invalid_scope", "scope exceeds the original grant")
 
+    try:
+        audience = audience_for(params_resource, family.resources)
+    except OAuthError as exc:
+        return exc
+
     record.rotated_at = now
     record.save(update_fields=["rotated_at"])
     access_token, expires_in = issue_access_token(
-        client=client, scope=scope, jkt=proof.jkt, family=family
+        client=client, scope=scope, jkt=proof.jkt, audience=audience, family=family
     )
     # RFC 6749 §6: the new refresh token carries the same scope as the old one,
     # whatever this particular access token was narrowed to.
@@ -176,7 +204,10 @@ def client_credentials(
             raise OAuthError("invalid_scope", "scope is malformed") from None
     if not scope or not set(scope) <= set(client.scopes):
         raise OAuthError("invalid_scope", "scope exceeds the client's registration")
-    access_token, expires_in = issue_access_token(client=client, scope=scope, jkt=proof.jkt)
+    audience = client_credentials_audience(client, params.get("resource"))
+    access_token, expires_in = issue_access_token(
+        client=client, scope=scope, jkt=proof.jkt, audience=audience
+    )
     return TokenResponse(access_token, expires_in, format_scope(scope))
 
 

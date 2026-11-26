@@ -6,6 +6,25 @@ uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-26
+
+### Added
+
+- Resource indicators (RFC 8707). The `resource` parameter on authorization,
+  pushed authorization and token requests selects a token's `aud` from the
+  new `OAUTH_RESOURCES` setting; the default audience stays valid. A request
+  for anything unregistered, or outside what the grant covered, is refused
+  with `invalid_target`. Refreshing stays within the original grant.
+- Clients carry a `resources` allow-list (`manage.py create_client
+  --resource`, or the admin); the default audience needs no entry. The consent
+  page names the resources a request asks for.
+
+### Changed
+
+- Dependencies updated to their latest releases.
+- Migration `0002_resource_indicators` adds `resources` to authorization codes
+  and token families.
+
 ## [0.2.0] - 2026-10-15
 
 ### Added
@@ -61,6 +80,7 @@ The first release.
 - A Docker image, a Compose stack, and CI through the shared
   `ci-workflows`.
 
-[Unreleased]: https://github.com/CtrlAltDevelop/oauth-dpop-server/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/CtrlAltDevelop/oauth-dpop-server/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/CtrlAltDevelop/oauth-dpop-server/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/CtrlAltDevelop/oauth-dpop-server/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/CtrlAltDevelop/oauth-dpop-server/releases/tag/v0.1.0

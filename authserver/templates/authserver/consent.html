@@ -6,6 +6,7 @@
 <ul>
   {% for name, description in scopes %}<li>{{ description }} <span class="muted">({{ name }})</span></li>{% endfor %}
 </ul>
+{% if resources %}<p>Only at: {% for resource in resources %}<strong>{{ resource }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
 <p class="muted">You will be sent back to <strong>{{ redirect_target }}</strong>.</p>
 <form method="post" action="?request={{ handle|urlencode }}">
   {% csrf_token %}

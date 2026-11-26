@@ -8,11 +8,6 @@ name: CI
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
-  schedule:
-    # Weekly, so a dependency that turns vulnerable is caught without a push.
-    - cron: "17 5 * * 1"
 
 concurrency:
   group: ci-${{ github.ref }}

@@ -7,7 +7,7 @@ the user instead (``UntrustedRedirect``). Everything after that is reported
 to the client by redirect (``AuthorizationError``).
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -20,6 +20,7 @@ from authserver.conf import server_settings
 from authserver.credentials import digest, new_token
 from authserver.http import single_valued
 from authserver.models import AuthorizationCode, Client
+from authserver.resources import known_resources
 from authserver.scopes import format_scope, parse_scope
 
 _JKT_LENGTH = 43  # base64url SHA-256, as every RFC 7638 thumbprint here is
@@ -55,6 +56,8 @@ class AuthorizationRequest:
     state: str | None
     code_challenge: str
     dpop_jkt: str | None
+    # RFC 8707. Defaulted so a request stashed before an upgrade still loads.
+    resources: list[str] = field(default_factory=list)
 
     def as_session_data(self) -> dict[str, Any]:
         return asdict(self)
@@ -99,6 +102,8 @@ def validate_authorization_request(
 
     if state is not None and len(state) > _MAX_STATE_LENGTH:
         raise fail("invalid_request", "state is too long")
+    # RFC 8707 §2.1: `resource` is the one parameter that may be repeated.
+    repeated = repeated - {"resource"}
     if repeated:
         raise fail("invalid_request", f"repeated parameters: {sorted(repeated)}")
     if params.get("response_type") != "code":
@@ -129,6 +134,11 @@ def validate_authorization_request(
     if dpop_jkt is not None and len(dpop_jkt) != _JKT_LENGTH:
         raise fail("invalid_request", "dpop_jkt is malformed")
 
+    try:
+        resources = known_resources(client, lists.get("resource", []))
+    except ValueError:
+        raise fail("invalid_target", "resource is not registered") from None
+
     return AuthorizationRequest(
         client_id=client.client_id,
         redirect_uri=redirect_uri,
@@ -136,6 +146,7 @@ def validate_authorization_request(
         state=state,
         code_challenge=challenge,
         dpop_jkt=dpop_jkt,
+        resources=resources,
     )
 
 
@@ -168,6 +179,7 @@ def issue_code(request: AuthorizationRequest, user: AbstractBaseUser, auth_time:
         scope=format_scope(request.scope),
         code_challenge=request.code_challenge,
         dpop_jkt=request.dpop_jkt or "",
+        resources=request.resources,
         auth_time=auth_time,
         expires_at=now + timedelta(seconds=server_settings().authorization_code_ttl),
     )

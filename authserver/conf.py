@@ -27,6 +27,7 @@ DEFAULT_DPOP_ALGORITHMS: tuple[str, ...] = ("ES256", "ES384", "Ed25519", "PS256"
 class ServerSettings:
     issuer: str
     audience: str
+    resources: tuple[str, ...]
     scopes: dict[str, str]
     access_token_ttl: int
     authorization_code_ttl: int
@@ -55,9 +56,13 @@ def _get(name: str, default: Any) -> Any:
 def server_settings() -> ServerSettings:
     issuer = str(_get("OAUTH_ISSUER", "http://localhost:8000")).rstrip("/")
     access_token_ttl = int(_get("OAUTH_ACCESS_TOKEN_TTL", 300))
+    audience = str(_get("OAUTH_ACCESS_TOKEN_AUDIENCE", f"{issuer}/api"))
     return ServerSettings(
         issuer=issuer,
-        audience=str(_get("OAUTH_ACCESS_TOKEN_AUDIENCE", f"{issuer}/api")),
+        audience=audience,
+        # RFC 8707: the resource servers a client may ask a token for. The
+        # default audience is always one, so existing clients keep working.
+        resources=tuple(dict.fromkeys([audience, *_get("OAUTH_RESOURCES", [])])),
         scopes=dict(_get("OAUTH_SCOPES", DEFAULT_SCOPES)),
         access_token_ttl=access_token_ttl,
         authorization_code_ttl=int(_get("OAUTH_AUTHORIZATION_CODE_TTL", 60)),

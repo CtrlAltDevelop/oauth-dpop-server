@@ -5,8 +5,11 @@
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue)
 ![Django](https://img.shields.io/badge/django-5.2%20%7C%206.1-green)
 ![PostgreSQL](https://img.shields.io/badge/postgresql-16-336791)
+![Redis](https://img.shields.io/badge/redis-7-DC382D)
+![Docker](https://img.shields.io/badge/docker-compose-2496ED)
 [![RFC 9449](https://img.shields.io/badge/RFC-9449%20DPoP-orange)](https://www.rfc-editor.org/rfc/rfc9449)
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![license: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![last commit](https://img.shields.io/github/last-commit/CtrlAltDevelop/oauth-dpop-server)](https://github.com/CtrlAltDevelop/oauth-dpop-server/commits/main)
 
 A small, standards-exact **OAuth 2.1 authorization server** whose every
 access token is **sender-constrained with DPoP**
@@ -54,7 +57,7 @@ sequenceDiagram
     participant R as Redis
     participant RS as Resource server (ninja_dpop)
 
-    Note over C: generates an ES256 key pair once;<br/>the private key never leaves the device
+    Note over C: generates an ES256 key pair once, and<br/>the private key never leaves the device
     C->>AS: POST /oauth/token<br/>DPoP: proof{htm, htu, iat, jti}
     AS->>R: nonce current?
     AS-->>C: 400 use_dpop_nonce<br/>DPoP-Nonce: n1
@@ -62,7 +65,7 @@ sequenceDiagram
     AS->>AS: verify typ, alg, jwk is public, signature,<br/>htm, htu, iat window, nonce
     AS->>R: SET jkt:jti NX EX 70 (replay cache)
     AS-->>C: 200 {access_token: JWT{cnf.jkt = thumbprint(jwk)},<br/>token_type: "DPoP", refresh_token}<br/>DPoP-Nonce: n1
-    C->>RS: GET /api/orders<br/>Authorization: DPoP <token><br/>DPoP: proof{…, ath = SHA-256(token)}
+    C->>RS: GET /api/orders<br/>Authorization: DPoP #lt;token#gt;<br/>DPoP: proof{…, ath = SHA-256(token)}
     RS->>RS: verify token (JWKS, iss, aud, exp, cnf.jkt)
     RS->>RS: verify proof: key = cnf.jkt, ath matches, htm/htu
     RS->>R: SET jkt:jti NX EX 70
@@ -150,6 +153,7 @@ docstring. File paths are relative to `tests/`.
 
 | RFC | Section | Requirement | Tests |
 |---|---|---|---|
+| 8707 | §2 | `resource` selects a single audience; unknown or out-of-grant resources are `invalid_target` | `test_resource_indicators.py` |
 | 9449 | §4.3 step 1 | At most one `DPoP` header | `dpop/test_proof.py::test_more_than_one_dpop_header_is_refused`, `::test_folded_dpop_headers_are_refused`, `test_token_endpoint.py::test_two_dpop_headers_are_refused` |
 | 9449 | §4.3 step 2 | A well-formed JWT | `dpop/test_proof.py::test_a_proof_that_is_not_a_jwt_is_refused`, `::test_a_payload_that_is_not_an_object_is_refused` |
 | 9449 | §4.3 step 3, §4.2 | `typ`, `alg`, `jwk`, `jti`, `htm`, `htu`, `iat` present | `dpop/test_proof.py::test_every_required_member_must_be_present`, `::test_iat_must_be_an_integer` |
@@ -251,6 +255,8 @@ or Django settings. The `OAUTH_*` settings are listed in
 | Setting | Default | |
 |---|---|---|
 | `OAUTH_ISSUER` | `http://localhost:8000` | The issuer identifier. Every `htu` at this server is checked against it. |
+| `OAUTH_ACCESS_TOKEN_AUDIENCE` | `<issuer>/api` | The default `aud`, used when a request names no `resource`. |
+| `OAUTH_RESOURCES` | `[]` | Further resource identifiers (RFC 8707) a client may request. The default audience is always allowed. |
 | `OAUTH_ACCESS_TOKEN_TTL` | 300 s | |
 | `OAUTH_REFRESH_TOKEN_TTL` / `OAUTH_REFRESH_FAMILY_TTL` | 14 / 30 days | Per token, and the absolute lifetime of a grant. |
 | `OAUTH_DPOP_ALGORITHMS` | ES256, ES384, Ed25519, PS256 | |
@@ -289,8 +295,8 @@ docs/adr/     architecture decision records
   discovery beyond RFC 8414.
 - **No dynamic client registration** (RFC 7591). Clients are registered with
   `manage.py create_client` or the admin.
-- **One audience.** Resource indicators (RFC 8707) are not implemented, so
-  every token's `aud` is `OAUTH_ACCESS_TOKEN_AUDIENCE`.
+- **One audience per token.** Resource indicators (RFC 8707) are supported,
+  but a token request names at most one `resource`.
 - **DPoP only.** There is no bearer-token fallback and no mTLS (RFC 8705);
   see ADR 0005.
 - **Consent is not remembered.** Every authorization asks again.
@@ -310,6 +316,10 @@ docs/adr/     architecture decision records
 - [`ci-workflows`](https://github.com/CtrlAltDevelop/ci-workflows): the shared
   CI this repository calls.
 
+## Contributing and security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
-[MIT](LICENSE) © 2026 Mohammad Zarif
+[AGPL-3.0-only](LICENSE) © 2026 Mohammad Zarif
